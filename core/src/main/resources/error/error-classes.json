@@ -3,6 +3,10 @@
     "message" : [ "Field name %s is ambiguous and has %s matching fields in the struct." ],
     "sqlState" : "42000"
   },
+  "CANNOT_CALL_METHOD_IN_ANALYZER" : {
+    "message" : [ "This method should not be called in the analyzer" ],
+    "sqlState" : "42000"
+  },
   "CANNOT_CAST_DATATYPE" : {
     "message" : [ "Cannot cast %s to %s." ],
     "sqlState" : "22005"
@@ -11,8 +15,28 @@
     "message" : [ "%s cannot be represented as Decimal(%s, %s)." ],
     "sqlState" : "22005"
   },
+  "CANNOT_CREATE_ARRAY_WITH_ELEMENTS_EXCEED_LIMIT" : {
+    "message" : [ "Cannot create array with %s elements of data due to exceeding the limit %s elements for ArrayData.%s" ],
+    "sqlState" : "2202E"
+  },
+  "CANNOT_CREATE_STAGING_DIRECTORY" : {
+    "message" : [ "Cannot create staging directory: %s" ],
+    "sqlState" : "42000"
+  },
   "CANNOT_PARSE_DECIMAL" : {
     "message" : [ "Cannot parse decimal" ],
+    "sqlState" : "42000"
+  },
+  "CANNOT_REMOVE_PARTITION_DIRECTORY" : {
+    "message" : [ "Cannot remove partition directory '%s'" ],
+    "sqlState" : "42000"
+  },
+  "CANNOT_REWRITE_DOMAIN_JOIN_WITH_CONDITIONS" : {
+    "message" : [ "Unable to rewrite domain join with conditions: %s\n%s" ],
+    "sqlState" : "42000"
+  },
+  "CANNOT_SAFELY_MERGE_SERDE_PROPERTIES" : {
+    "message" : [ "Cannot safely merge SERDEPROPERTIES:\n%s\n%s\nThe conflict keys: %s" ],
     "sqlState" : "42000"
   },
   "CAST_CAUSES_OVERFLOW" : {
@@ -22,6 +46,10 @@
   "CONCURRENT_QUERY" : {
     "message" : [ "Another instance of this query was just started by a concurrent session." ]
   },
+  "DECORRELATE_INNER_QUERY_THROUGH_PLAN_UNSUPPORTED" : {
+    "message" : [ "Decorrelate inner query through %s is not supported." ],
+    "sqlState" : "0A000"
+  },
   "DIVIDE_BY_ZERO" : {
     "message" : [ "divide by zero" ],
     "sqlState" : "22012"
@@ -29,6 +57,10 @@
   "DUPLICATE_KEY" : {
     "message" : [ "Found duplicate keys '%s'" ],
     "sqlState" : "23000"
+  },
+  "DYNAMIC_PARTITION_KEY_NOT_AMONG_WRITTEN_PARTITION_PATHS" : {
+    "message" : [ "Dynamic partition key %s is not among written partition paths." ],
+    "sqlState" : "22023"
   },
   "FAILED_EXECUTE_UDF" : {
     "message" : [ "Failed to execute user defined function (%s: (%s) => %s)" ]
@@ -86,12 +118,28 @@
   "INVALID_JSON_SCHEMA_MAPTYPE" : {
     "message" : [ "Input schema %s can only contain StringType as a key type for a MapType." ]
   },
+  "INVALID_KERBEROS_CONFIG_FOR_HIVE_SERVER2" : {
+    "message" : [ "HiveServer2 Kerberos principal or keytab is not correctly configured" ],
+    "sqlState" : "42000"
+  },
+  "MALFORMED_RECORDS_DETECTED_IN_RECORD_PARSING" : {
+    "message" : [ "Malformed records are detected in record parsing. Parse Mode: %s. To process malformed records as null result, try setting the option 'mode' as 'PERMISSIVE'." ],
+    "sqlState" : "42000"
+  },
   "MAP_KEY_DOES_NOT_EXIST" : {
     "message" : [ "Key %s does not exist." ]
   },
   "MISSING_COLUMN" : {
     "message" : [ "cannot resolve '%s' given input columns: [%s]" ],
     "sqlState" : "42000"
+  },
+  "MISSING_PARENT_SPARK_UI_TO_ATTACH_TAB" : {
+    "message" : [ "Parent SparkUI to attach this tab to not found!" ],
+    "sqlState" : "42000"
+  },
+  "MISSING_RULE_ID" : {
+    "message" : [ "Rule id not found for %s" ],
+    "sqlState" : "22023"
   },
   "MISSING_STATIC_PARTITION_COLUMN" : {
     "message" : [ "Unknown static partition column: %s" ],
@@ -105,6 +153,9 @@
     "message" : [ "PARTITION clause cannot contain a non-partition column name: %s" ],
     "sqlState" : "42000"
   },
+  "ONCE_STRATEGY_IDEMPOTENCE_IS_BROKEN_FOR_BATCH" : {
+    "message" : [ "Once strategy's idempotence is broken for batch %s\n%s" ]
+  },
   "PIVOT_VALUE_DATA_TYPE_MISMATCH" : {
     "message" : [ "Invalid pivot value '%s': value data type %s does not match pivot column data type %s" ],
     "sqlState" : "42000"
@@ -113,6 +164,9 @@
     "message" : [ "Failed to rename as %s was not found" ],
     "sqlState" : "22023"
   },
+  "REQUESTED_PARTITIONS_MISMATCH_TABLE_PARTITIONS" : {
+    "message" : [ "Requested partitioning does not match the %s table:\nRequested partitions: %s\nTable partitions: %s " ]
+  },
   "ROW_FROM_CSV_PARSER_NOT_EXPECTED" : {
     "message" : [ "Expected one row from CSV parser." ],
     "sqlState" : "42000"
@@ -120,6 +174,12 @@
   "SECOND_FUNCTION_ARGUMENT_NOT_INTEGER" : {
     "message" : [ "The second argument of '%s' function needs to be an integer." ],
     "sqlState" : "22023"
+  },
+  "STRUCTURAL_INTEGRITY_IS_BROKEN_AFTER_APPLYING_RULE" : {
+    "message" : [ "After applying rule %s in batch %s, the structural integrity of the plan is broken." ]
+  },
+  "STRUCTURAL_INTEGRITY_OF_INPUT_PLAN_IS_BROKEN_IN_CLASS" : {
+    "message" : [ "The structural integrity of the input plan is broken in %s." ]
   },
   "UNABLE_TO_ACQUIRE_MEMORY" : {
     "message" : [ "Unable to acquire %s bytes of memory, got %s" ]
@@ -136,8 +196,20 @@
     "message" : [ "Unsupported data type %s" ],
     "sqlState" : "0A000"
   },
+  "UNSUPPORTED_INFER_SCHEMA_FOR_HIVE" : {
+    "message" : [ "inferSchema is not supported for hive data source." ],
+    "sqlState" : "0A000"
+  },
   "UNSUPPORTED_LITERAL_TYPE" : {
     "message" : [ "Unsupported literal type %s %s" ],
+    "sqlState" : "0A000"
+  },
+  "UNSUPPORTED_PAIR_AT_FUNCTION" : {
+    "message" : [ "Not supported pair: %s, %s at %s" ],
+    "sqlState" : "0A000"
+  },
+  "UNSUPPORTED_REMOTE_OPERATIONS" : {
+    "message" : [ "Remote operations not supported" ],
     "sqlState" : "0A000"
   },
   "UNSUPPORTED_SIMPLE_STRING_WITH_NODE_ID" : {
