@@ -3,6 +3,14 @@
     "message" : [ "Field name %s is ambiguous and has %s matching fields in the struct." ],
     "sqlState" : "42000"
   },
+  "CANNOT_BROADCAST_TABLE_OVER_MAX_TABLE_BYTES" : {
+    "message" : [ "Cannot broadcast the table that is larger than %sGB: %s GB" ],
+    "sqlState" : "42000"
+  },
+  "CANNOT_BROADCAST_TABLE_OVER_MAX_TABLE_ROWS" : {
+    "message" : [ "Cannot broadcast the table over %s rows: %s rows" ],
+    "sqlState" : "42000"
+  },
   "CANNOT_CAST_DATATYPE" : {
     "message" : [ "Cannot cast %s to %s." ],
     "sqlState" : "22005"
@@ -11,9 +19,20 @@
     "message" : [ "%s cannot be represented as Decimal(%s, %s)." ],
     "sqlState" : "22005"
   },
+  "CANNOT_DROP_MULTIPLE_PARTITIONS_ON_NONATOMIC_PARTITION_TABLE" : {
+    "message" : [ "Nonatomic partition table %s can not drop multiple partitions." ],
+    "sqlState" : "42000"
+  },
+  "CANNOT_MERGE_CLASS_WITH_OTHER_CLASS" : {
+    "message" : [ "Cannot merge %s with %s" ],
+    "sqlState" : "42000"
+  },
   "CANNOT_PARSE_DECIMAL" : {
     "message" : [ "Cannot parse decimal" ],
     "sqlState" : "42000"
+  },
+  "CANNOT_PURGE_AS_BREAK_INTERNAL_STATE" : {
+    "message" : [ "Cannot purge as it might break internal state." ]
   },
   "CAST_CAUSES_OVERFLOW" : {
     "message" : [ "Casting %s to %s causes overflow" ],
@@ -32,6 +51,21 @@
   },
   "FAILED_EXECUTE_UDF" : {
     "message" : [ "Failed to execute user defined function (%s: (%s) => %s)" ]
+  },
+  "FAILED_GENERATE_EPOCH_MARKER" : {
+    "message" : [ "Epoch marker generation failed" ]
+  },
+  "FAILED_MERGING_SCHEMA" : {
+    "message" : [ "Failed merging schema: %s" ]
+  },
+  "FAILED_READ_DATA" : {
+    "message" : [ "Data read failed" ]
+  },
+  "FAILED_READ_DELTA_FILE" : {
+    "message" : [ "Error reading delta file %s of %s: key size cannot be %s" ]
+  },
+  "FAILED_READ_SNAPSHOT_FILE" : {
+    "message" : [ "Error reading snapshot file %s of %s: %s" ]
   },
   "FAILED_RENAME_PATH" : {
     "message" : [ "Failed to rename %s to %s as destination already exists" ],
@@ -65,6 +99,10 @@
     "message" : [ "Index %s must be between 0 and the length of the ArrayData." ],
     "sqlState" : "22023"
   },
+  "INTEGER_OVER_FLOW" : {
+    "message" : [ "Integer overflow. %s" ],
+    "sqlState" : "22003"
+  },
   "INTERNAL_ERROR" : {
     "message" : [ "%s" ]
   },
@@ -85,6 +123,10 @@
   },
   "INVALID_JSON_SCHEMA_MAPTYPE" : {
     "message" : [ "Input schema %s can only contain StringType as a key type for a MapType." ]
+  },
+  "LATEST_OFFSET_NOT_CALLED" : {
+    "message" : [ "latestOffset(Offset, ReadLimit) should be called instead of this method" ],
+    "sqlState" : "42000"
   },
   "MAP_KEY_DOES_NOT_EXIST" : {
     "message" : [ "Key %s does not exist." ]
@@ -132,12 +174,32 @@
     "message" : [ "Please add an implementation for a column change here" ],
     "sqlState" : "0A000"
   },
+  "UNSUPPORTED_CLEAN_UP_SOURCE_FILES" : {
+    "message" : [ "Clean up source files is not supported when reading from the output directory of FileStreamSink." ],
+    "sqlState" : "0A000"
+  },
+  "UNSUPPORTED_CONTINUOUS_PROCESSING" : {
+    "message" : [ "Data source %s does not support continuous processing." ],
+    "sqlState" : "0A000"
+  },
   "UNSUPPORTED_DATATYPE" : {
     "message" : [ "Unsupported data type %s" ],
     "sqlState" : "0A000"
   },
+  "UNSUPPORTED_DYNAMIC_PARTITION_OVERWRITE" : {
+    "message" : [ "Table does not support dynamic partition overwrite: %s" ],
+    "sqlState" : "0A000"
+  },
+  "UNSUPPORTED_EXECUTE_CODE_PATH" : {
+    "message" : [ "%s does not support the execute() code path." ],
+    "sqlState" : "0A000"
+  },
   "UNSUPPORTED_LITERAL_TYPE" : {
     "message" : [ "Unsupported literal type %s %s" ],
+    "sqlState" : "0A000"
+  },
+  "UNSUPPORTED_OVERWRITE_TABLE_BY_EXPRESSION" : {
+    "message" : [ "Table does not support overwrite by expression: %s" ],
     "sqlState" : "0A000"
   },
   "UNSUPPORTED_SIMPLE_STRING_WITH_NODE_ID" : {
@@ -146,6 +208,13 @@
   "UNSUPPORTED_TRANSACTION_BY_JDBC_SERVER" : {
     "message" : [ "The target JDBC server does not support transaction and can only support ALTER TABLE with a single action." ],
     "sqlState" : "0A000"
+  },
+  "UNSUPPORTED_TRUNCATE_MULTIPLE_PARTITION" : {
+    "message" : [ "The table %s does not support truncation of multiple partition." ],
+    "sqlState" : "0A000"
+  },
+  "WRITER_ABORTED_DUE_TO_TASK_FAILURE" : {
+    "message" : [ "Foreach writer has been aborted due to a task failure" ]
   },
   "WRITING_JOB_ABORTED" : {
     "message" : [ "Writing job aborted" ],
