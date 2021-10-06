@@ -50,7 +50,7 @@ import org.apache.spark.sql.catalyst.util.{sideBySide, BadRecordException, FailF
 import org.apache.spark.sql.connector.catalog.{CatalogNotFoundException, Identifier, Table, TableProvider}
 import org.apache.spark.sql.connector.catalog.CatalogV2Implicits._
 import org.apache.spark.sql.connector.expressions.Transform
-import org.apache.spark.sql.execution.QueryExecutionException
+import org.apache.spark.sql.execution.{QueryExecutionException, SparkQueryExecutionException}
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.internal.StaticSQLConf.GLOBAL_TEMP_DATABASE
 import org.apache.spark.sql.streaming.OutputMode
@@ -1729,101 +1729,98 @@ object QueryExecutionErrors {
   def legacyCheckpointDirectoryExistsError(
       checkpointPath: Path, legacyCheckpointDir: String): Throwable = {
     new SparkException(
-      s"""
-         |Error: we detected a possible problem with the location of your checkpoint and you
-         |likely need to move it before restarting this query.
-         |
-         |Earlier version of Spark incorrectly escaped paths when writing out checkpoints for
-         |structured streaming. While this was corrected in Spark 3.0, it appears that your
-         |query was started using an earlier version that incorrectly handled the checkpoint
-         |path.
-         |
-         |Correct Checkpoint Directory: $checkpointPath
-         |Incorrect Checkpoint Directory: $legacyCheckpointDir
-         |
-         |Please move the data from the incorrect directory to the correct one, delete the
-         |incorrect directory, and then restart this query. If you believe you are receiving
-         |this message in error, you can disable it with the SQL conf
-         |${SQLConf.STREAMING_CHECKPOINT_ESCAPED_PATH_CHECK_ENABLED.key}.
-       """.stripMargin)
+      errorClass = "LEGACY_CHECKPOINT_DIRECTORY_EXISTS",
+      messageParameters = Array(
+        checkpointPath.toString,
+        legacyCheckpointDir,
+        {SQLConf.STREAMING_CHECKPOINT_ESCAPED_PATH_CHECK_ENABLED.key}), null)
   }
 
   def subprocessExitedError(
       exitCode: Int, stderrBuffer: CircularBuffer, cause: Throwable): Throwable = {
-    new SparkException(s"Subprocess exited with status $exitCode. " +
-      s"Error: ${stderrBuffer.toString}", cause)
+    new SparkException(
+      errorClass = "SUBPROCESS_EXITED",
+      messageParameters = Array(exitCode.toString, stderrBuffer.toString), cause)
   }
 
   def outputDataTypeUnsupportedByNodeWithoutSerdeError(
       nodeName: String, dt: DataType): Throwable = {
-    new SparkException(s"$nodeName without serde does not support " +
-      s"${dt.getClass.getSimpleName} as output data type")
+    new SparkException(
+      errorClass = "UNSUPPORTED_OUTPUT_DATATYPE_BY_NODE_WITHOUT_SERDE",
+      messageParameters = Array(nodeName, dt.getClass.getSimpleName), null)
   }
 
   def invalidStartIndexError(numRows: Int, startIndex: Int): Throwable = {
-    new ArrayIndexOutOfBoundsException(
-      "Invalid `startIndex` provided for generating iterator over the array. " +
-        s"Total elements: $numRows, requested `startIndex`: $startIndex")
+    new SparkArrayIndexOutOfBoundsException(
+      errorClass = "INVALID_START_INDEX",
+      messageParameters = Array(numRows.toString, startIndex.toString))
   }
 
   def concurrentModificationOnExternalAppendOnlyUnsafeRowArrayError(
       className: String): Throwable = {
-    new ConcurrentModificationException(
-      s"The backing $className has been modified since the creation of this Iterator")
+    new SparkConcurrentModificationException(
+      errorClass = "CONCURRENT_MODIFICATION",
+      messageParameters = Array(className))
   }
 
   def doExecuteBroadcastNotImplementedError(nodeName: String): Throwable = {
-    new UnsupportedOperationException(s"$nodeName does not implement doExecuteBroadcast")
+    new SparkUnsupportedOperationException(
+      errorClass = "DO_EXECUTE_BROADCAST_NOT_IMPLEMENTED",
+      messageParameters = Array(nodeName))
   }
 
   def databaseNameConflictWithSystemPreservedDatabaseError(globalTempDB: String): Throwable = {
     new SparkException(
-      s"""
-         |$globalTempDB is a system preserved database, please rename your existing database
-         |to resolve the name conflict, or set a different value for
-         |${GLOBAL_TEMP_DATABASE.key}, and launch your Spark application again.
-       """.stripMargin.split("\n").mkString(" "))
+      errorClass = "INVALID_DATABASE_NAME",
+      messageParameters = Array(globalTempDB, {GLOBAL_TEMP_DATABASE.key}), null)
   }
 
   def commentOnTableUnsupportedError(): Throwable = {
-    new SQLFeatureNotSupportedException("comment on table is not supported")
+    new SparkSQLFeatureNotSupportedException(
+      errorClass = "UNSUPPORTED_COMMENT_ON_TABLE",
+      messageParameters = Array.empty)
   }
 
   def unsupportedUpdateColumnNullabilityError(): Throwable = {
-    new SQLFeatureNotSupportedException("UpdateColumnNullability is not supported")
+    new SparkSQLFeatureNotSupportedException(
+      errorClass = "UNSUPPORTED_UPDATE_COLUMN_NULLABILITY",
+      messageParameters = Array.empty)
   }
 
   def renameColumnUnsupportedForOlderMySQLError(): Throwable = {
-    new SQLFeatureNotSupportedException(
-      "Rename column is only supported for MySQL version 8.0 and above.")
+    new SparkSQLFeatureNotSupportedException(
+      errorClass = "UNSUPPORTED_RENAME_COLUMN_FOR_OLDER_MYSQL",
+      messageParameters = Array.empty)
   }
 
   def failedToExecuteQueryError(e: Throwable): QueryExecutionException = {
-    val message = "Hit an error when executing a query" +
-      (if (e.getMessage == null) "" else s": ${e.getMessage}")
-    new QueryExecutionException(message, e)
+    new SparkQueryExecutionException(
+      errorClass = "FAILED_EXECUTE_QUERY",
+      messageParameters = Array((if (e.getMessage == null) "" else s": ${e.getMessage}")), e)
   }
 
   def nestedFieldUnsupportedError(colName: String): Throwable = {
-    new UnsupportedOperationException(s"Nested field $colName is not supported.")
+    new SparkUnsupportedOperationException(
+      errorClass = "UNSUPPORTED_NESTED_FIELD",
+      messageParameters = Array(colName))
   }
 
   def transformationsAndActionsNotInvokedByDriverError(): Throwable = {
     new SparkException(
-      """
-        |Dataset transformations and actions can only be invoked by the driver, not inside of
-        |other Dataset transformations; for example, dataset1.map(x => dataset2.values.count()
-        |* x) is invalid because the values transformation and count action cannot be
-        |performed inside of the dataset1.map transformation. For more information,
-        |see SPARK-28702.
-      """.stripMargin.split("\n").mkString(" "))
+      errorClass = "TRANSFORMATIONS_AND_ACTIONS_NOT_INVOKED_BY_DRIVER",
+      messageParameters = Array.empty, null)
   }
 
   def repeatedPivotsUnsupportedError(): Throwable = {
-    new UnsupportedOperationException("repeated pivots are not supported")
+    new SparkUnsupportedOperationException(
+      errorClass = "UNSUPPORTED_REPEATED_PIVOTS",
+      messageParameters = Array.empty
+    )
   }
 
   def pivotNotAfterGroupByUnsupportedError(): Throwable = {
-    new UnsupportedOperationException("pivot is only supported after a groupBy")
+    new SparkUnsupportedOperationException(
+      errorClass = "UNSUPPORTED_PIVOT_NOT_AFTER_GROUP_BY",
+      messageParameters = Array.empty)
   }
 }

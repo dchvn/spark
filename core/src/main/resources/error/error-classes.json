@@ -19,6 +19,10 @@
     "message" : [ "Casting %s to %s causes overflow" ],
     "sqlState" : "22005"
   },
+  "CONCURRENT_MODIFICATION" : {
+    "message" : [ "The backing %s has been modified since the creation of this Iterator" ],
+    "sqlState" : "23000"
+  },
   "CONCURRENT_QUERY" : {
     "message" : [ "Another instance of this query was just started by a concurrent session." ]
   },
@@ -26,9 +30,16 @@
     "message" : [ "divide by zero" ],
     "sqlState" : "22012"
   },
+  "DO_EXECUTE_BROADCAST_NOT_IMPLEMENTED" : {
+    "message" : [ "%s does not implement doExecuteBroadcast" ],
+    "sqlState" : "42000"
+  },
   "DUPLICATE_KEY" : {
     "message" : [ "Found duplicate keys '%s'" ],
     "sqlState" : "23000"
+  },
+  "FAILED_EXECUTE_QUERY" : {
+    "message" : [ "Hit an error when executing a query %s" ]
   },
   "FAILED_EXECUTE_UDF" : {
     "message" : [ "Failed to execute user defined function (%s: (%s) => %s)" ]
@@ -71,6 +82,10 @@
   "INVALID_ARRAY_INDEX" : {
     "message" : [ "Invalid index: %s, numElements: %s" ]
   },
+  "INVALID_DATABASE_NAME" : {
+    "message" : [ "%s is a system preserved database, please rename your existing database to resolve the name conflict, or set a different value for %s, and launch your Spark application again." ],
+    "sqlState" : "42000"
+  },
   "INVALID_FIELD_NAME" : {
     "message" : [ "Field name %s is invalid: %s is not a struct." ],
     "sqlState" : "42000"
@@ -85,6 +100,13 @@
   },
   "INVALID_JSON_SCHEMA_MAPTYPE" : {
     "message" : [ "Input schema %s can only contain StringType as a key type for a MapType." ]
+  },
+  "INVALID_START_INDEX" : {
+    "message" : [ "Invalid `startIndex` provided for generating iterator over the array. Total elements: %s, requested `startIndex`: %s" ],
+    "sqlState" : "42000"
+  },
+  "LEGACY_CHECKPOINT_DIRECTORY_EXISTS" : {
+    "message" : [ "Error: we detected a possible problem with the location of your checkpoint and you likely need to move it before restarting this query.", "Earlier version of Spark incorrectly escaped paths when writing out checkpoints for structured streaming. While this was corrected in Spark 3.0, it appears that your query was started using an earlier version that incorrectly handled the checkpoint path.", "Correct Checkpoint Directory: %s Incorrect Checkpoint Directory: %s", "Please move the data from the incorrect directory to the correct one, delete the incorrect directory, and then restart this query. If you believe you are receiving this message in error, you can disable it with the SQL conf %s" ]
   },
   "MAP_KEY_DOES_NOT_EXIST" : {
     "message" : [ "Key %s does not exist." ]
@@ -121,6 +143,13 @@
     "message" : [ "The second argument of '%s' function needs to be an integer." ],
     "sqlState" : "22023"
   },
+  "SUBPROCESS_EXITED" : {
+    "message" : [ "Subprocess exited with status %s. " ]
+  },
+  "TRANSFORMATIONS_AND_ACTIONS_NOT_INVOKED_BY_DRIVER" : {
+    "message" : [ "Dataset transformations and actions can only be invoked by the driver, not inside of other Dataset transformations; for example, dataset1.map(x => dataset2.values.count()* x) is invalid because the values transformation and count action cannot be performed inside of the dataset1.map transformation. For more information, see SPARK-28702." ],
+    "sqlState" : "42000"
+  },
   "UNABLE_TO_ACQUIRE_MEMORY" : {
     "message" : [ "Unable to acquire %s bytes of memory, got %s" ]
   },
@@ -132,6 +161,10 @@
     "message" : [ "Please add an implementation for a column change here" ],
     "sqlState" : "0A000"
   },
+  "UNSUPPORTED_COMMENT_ON_TABLE" : {
+    "message" : [ "comment on table is not supported" ],
+    "sqlState" : "0A000"
+  },
   "UNSUPPORTED_DATATYPE" : {
     "message" : [ "Unsupported data type %s" ],
     "sqlState" : "0A000"
@@ -140,11 +173,35 @@
     "message" : [ "Unsupported literal type %s %s" ],
     "sqlState" : "0A000"
   },
+  "UNSUPPORTED_NESTED_FIELD" : {
+    "message" : [ "Nested field $colName is not supported." ],
+    "sqlState" : "0A000"
+  },
+  "UNSUPPORTED_OUTPUT_DATATYPE_BY_NODE_WITHOUT_SERDE" : {
+    "message" : [ "%s without serde does not support %s as output data type" ],
+    "sqlState" : "0A000"
+  },
+  "UNSUPPORTED_PIVOT_NOT_AFTER_GROUP_BY" : {
+    "message" : [ "pivot is only supported after a groupBy" ],
+    "sqlState" : "0A000"
+  },
+  "UNSUPPORTED_RENAME_COLUMN_FOR_OLDER_MYSQL" : {
+    "message" : [ "Rename column is only supported for MySQL version 8.0 and above." ],
+    "sqlState" : "0A000"
+  },
+  "UNSUPPORTED_REPEATED_PIVOTS" : {
+    "message" : [ "repeated pivots are not supported" ],
+    "sqlState" : "0A000"
+  },
   "UNSUPPORTED_SIMPLE_STRING_WITH_NODE_ID" : {
     "message" : [ "%s does not implement simpleStringWithNodeId" ]
   },
   "UNSUPPORTED_TRANSACTION_BY_JDBC_SERVER" : {
     "message" : [ "The target JDBC server does not support transaction and can only support ALTER TABLE with a single action." ],
+    "sqlState" : "0A000"
+  },
+  "UNSUPPORTED_UPDATE_COLUMN_NULLABILITY" : {
+    "message" : [ "UpdateColumnNullability is not supported" ],
     "sqlState" : "0A000"
   },
   "WRITING_JOB_ABORTED" : {
