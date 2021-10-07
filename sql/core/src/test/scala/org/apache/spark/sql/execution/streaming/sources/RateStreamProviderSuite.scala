@@ -299,7 +299,7 @@ class RateStreamProviderSuite extends StreamTest {
   }
 
   test("user-specified schema given") {
-    val exception = intercept[SparkUnsupportedOperationException] {
+    val exception = intercept[UnsupportedOperationException] {
       spark.readStream
         .format("rate")
         .schema(spark.range(1).schema)
