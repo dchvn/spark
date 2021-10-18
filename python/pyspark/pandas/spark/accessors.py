@@ -560,7 +560,8 @@ class SparkFrameMethods(object):
         return CachedDataFrame(self._psdf._internal)
 
     def persist(
-        self, storage_level: StorageLevel = StorageLevel.MEMORY_AND_DISK
+        self,
+        storage_level: StorageLevel = StorageLevel.MEMORY_AND_DISK,  # type: ignore[attr-defined]
     ) -> "CachedDataFrame":
         """
         Yields and caches the current DataFrame with a specific StorageLevel.
