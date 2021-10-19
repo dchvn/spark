@@ -1185,7 +1185,9 @@ class DataStreamWriter(object):
             close_exists = doesMethodExist('close')
 
             def func_with_open_process_close(partition_id: Any, iterator: Iterator) -> Iterator:
-                epoch_id = TaskContext.get().getLocalProperty('streaming.sql.batchId')
+                epoch_id = (TaskContext.
+                            get().
+                            getLocalProperty('streaming.sql.batchId'))  # type: ignore[union-attr]
                 if epoch_id:
                     int_epoch_id = int(epoch_id)
                 else:
