@@ -120,10 +120,11 @@ ALL_GATHER_FUNCTION = 2
 
 
 def _load_from_socket(
-        port: Union[str, int, None],
-        auth_secret: str,
-        function: int,
-        all_gather_message: Optional[str] = None) -> List[str]:
+    port: Union[str, int, None],
+    auth_secret: str,
+    function: int,
+    all_gather_message: Optional[str] = None
+) -> List[str]:
     """
     Load data from a given socket, this is a blocking method thus only return when the socket
     connection has been closed.
@@ -204,9 +205,10 @@ class BarrierTaskContext(TaskContext):
 
     @classmethod
     def _initialize(
-            cls: Type["BarrierTaskContext"],
-            port: Union[str, int, None],
-            secret: str) -> None:
+        cls: Type["BarrierTaskContext"],
+        port: Union[str, int, None],
+        secret: str
+    ) -> None:
         """
         Initialize BarrierTaskContext, other methods within BarrierTaskContext can only be called
         after BarrierTaskContext is initialized.
