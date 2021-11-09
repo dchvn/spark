@@ -105,12 +105,12 @@ class DStream(Generic[T]):
         """
         Return a new DStream containing only the elements that satisfy predicate.
         """
-        def func(iterator: Iterable[T]) -> Iterable[U]:
-            return filter(f, iterator)  # type: ignore[arg-type]
+        def func(iterator: Iterable[T]) -> Iterable[T]:
+            return filter(f, iterator)
         return self.mapPartitions(func, True)
 
     def flatMap(
-        self: "DStream[T]",
+        self,
         f: Callable[[T], Iterable[U]],
         preservesPartitioning: bool = False,
     ) -> "DStream[U]":
@@ -123,7 +123,7 @@ class DStream(Generic[T]):
         return self.mapPartitionsWithIndex(func, preservesPartitioning)
 
     def map(
-        self: "DStream[T]", f: Callable[[T], U], preservesPartitioning: bool = False
+        self, f: Callable[[T], U], preservesPartitioning: bool = False
     ) -> "DStream[U]":
         """
         Return a new DStream by applying a function to each element of DStream.
@@ -162,7 +162,7 @@ class DStream(Generic[T]):
         return (
             self.map(lambda x: (None, x))
                 .reduceByKey(func, 1)  # type: ignore[arg-type]
-                .map(lambda x: x[1])  # type: ignore[arg-type, return-value]
+                .map(lambda x: cast(T, x[1]))
         )
 
     def reduceByKey(
@@ -191,7 +191,7 @@ class DStream(Generic[T]):
             numPartitions = self._sc.defaultParallelism
 
         def func(rdd: "RDD[Tuple[K, V]]") -> "RDD[Tuple[K, U]]":
-            return rdd.combineByKey(  # type: ignore[misc, return-value]
+            return rdd.combineByKey(
                 createCombiner, mergeValue, mergeCombiners, numPartitions)
         return self.transform(func)
 
@@ -276,7 +276,7 @@ class DStream(Generic[T]):
         to RDD of this DStream.
         """
         def func(iterator: Iterable[T]) -> Iterable[U]:
-            yield list(iterator)  # type: ignore[misc]
+            yield cast(U, list(iterator))
         return self.mapPartitions(func)
 
     def cache(self) -> "DStream[T]":
@@ -653,7 +653,7 @@ class DStream(Generic[T]):
             slideDuration,
             1
         )
-        return reduced.map(lambda kv: kv[1])  # type: ignore[arg-type, return-value]
+        return reduced.map(lambda kv: cast(T, kv[1]))
 
     def countByWindow(
         self, windowDuration: int, slideDuration: int
