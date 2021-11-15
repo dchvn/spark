@@ -194,20 +194,25 @@ class ResolveSessionCatalog(val catalogManager: CatalogManager)
 
     // For REPLACE TABLE [AS SELECT], we should fail if the catalog is resolved to the
     // session catalog and the table provider is not v2.
-    case c @ ReplaceTableStatement(
-         SessionCatalogAndTable(catalog, tbl), _, _, _, _, _, _, _, _, _, _) =>
+    case c @ ReplaceTable(
+      ResolvedDBObjectName(catalog, name), _, _, _, _, _, _, _, _, _, _) =>
       val provider = c.provider.getOrElse(conf.defaultDataSourceName)
-      if (!isV2Provider(provider)) {
+      if (isSessionCatalog(catalog) && !isV2Provider(provider)) {
         throw QueryCompilationErrors.replaceTableOnlySupportedWithV2TableError
       } else {
         ReplaceTable(
-          catalog.asTableCatalog,
-          tbl.asIdentifier,
+          ResolvedDBObjectName(catalog, name),
           c.tableSchema,
-          // convert the bucket spec and add it as a transform
           c.partitioning ++ c.bucketSpec.map(_.asTransform),
           convertTableProperties(c),
-          orCreate = c.orCreate)
+          c.options,
+          c.bucketSpec,
+          c.provider,
+          c.location,
+          c.comment,
+          c.serde,
+          c.orCreate
+        )
       }
 
     case c @ ReplaceTableAsSelectStatement(

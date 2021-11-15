@@ -166,25 +166,6 @@ case class CreateTableAsSelectStatement(
 }
 
 /**
- * A REPLACE TABLE command, as parsed from SQL.
- *
- * If the table exists prior to running this command, executing this statement
- * will replace the table's metadata and clear the underlying rows from the table.
- */
-case class ReplaceTableStatement(
-    tableName: Seq[String],
-    tableSchema: StructType,
-    partitioning: Seq[Transform],
-    bucketSpec: Option[BucketSpec],
-    properties: Map[String, String],
-    provider: Option[String],
-    options: Map[String, String],
-    location: Option[String],
-    comment: Option[String],
-    serde: Option[SerdeInfo],
-    orCreate: Boolean) extends LeafParsedStatement
-
-/**
  * A REPLACE TABLE AS SELECT command, as parsed from SQL.
  */
 case class ReplaceTableAsSelectStatement(

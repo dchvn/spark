@@ -18,8 +18,8 @@
 package org.apache.spark.sql.catalyst.plans.logical
 
 import org.apache.spark.sql.catalyst.analysis.{AnalysisContext, FieldName, NamedRelation, PartitionSpec, UnresolvedException}
+import org.apache.spark.sql.catalyst.catalog.{BucketSpec, FunctionResource}
 import org.apache.spark.sql.catalyst.catalog.CatalogTypes.TablePartitionSpec
-import org.apache.spark.sql.catalyst.catalog.FunctionResource
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference, AttributeSet, Expression, Unevaluable}
 import org.apache.spark.sql.catalyst.plans.DescribeCommandSchema
 import org.apache.spark.sql.catalyst.trees.BinaryLike
@@ -190,6 +190,18 @@ trait V2CreateTablePlan extends LogicalPlan {
   def withPartitioning(rewritten: Seq[Transform]): V2CreateTablePlan
 }
 
+trait V2CreateTablePlanX extends LogicalPlan {
+  def name: LogicalPlan
+  def partitioning: Seq[Transform]
+  def tableSchema: StructType
+
+  /**
+   * Creates a copy of this node with the new partitioning transforms. This method is used to
+   * rewrite the partition transforms normalized according to the table schema.
+   */
+  def withPartitioning(rewritten: Seq[Transform]): V2CreateTablePlanX
+}
+
 /**
  * Create a new table with a v2 catalog.
  */
@@ -244,13 +256,21 @@ case class CreateTableAsSelect(
  * The persisted table will have no contents as a result of this operation.
  */
 case class ReplaceTable(
-    catalog: TableCatalog,
-    tableName: Identifier,
+    name: LogicalPlan,
     tableSchema: StructType,
     partitioning: Seq[Transform],
     properties: Map[String, String],
-    orCreate: Boolean) extends LeafCommand with V2CreateTablePlan {
-  override def withPartitioning(rewritten: Seq[Transform]): V2CreateTablePlan = {
+    options: Map[String, String],
+    bucketSpec: Option[BucketSpec],
+    provider: Option[String],
+    location: Option[String],
+    comment: Option[String],
+    serde: Option[SerdeInfo],
+    orCreate: Boolean) extends UnaryCommand with V2CreateTablePlanX {
+  override def child: LogicalPlan = name
+  override protected def withNewChildInternal(newChild: LogicalPlan): V2CreateTablePlanX =
+    copy(name = newChild)
+  override def withPartitioning(rewritten: Seq[Transform]): V2CreateTablePlanX = {
     this.copy(partitioning = rewritten)
   }
 }
