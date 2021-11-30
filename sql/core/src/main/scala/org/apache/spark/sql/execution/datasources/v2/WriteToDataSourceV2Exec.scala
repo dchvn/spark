@@ -28,9 +28,9 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.catalyst.expressions.Attribute
-import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, UnaryNode}
+import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, TableSpec, UnaryNode}
 import org.apache.spark.sql.catalyst.util.CharVarcharUtils
-import org.apache.spark.sql.connector.catalog.{Identifier, StagedTable, StagingTableCatalog, SupportsWrite, Table, TableCatalog}
+import org.apache.spark.sql.connector.catalog.{CatalogV2Util, Identifier, StagedTable, StagingTableCatalog, SupportsWrite, Table, TableCatalog}
 import org.apache.spark.sql.connector.expressions.Transform
 import org.apache.spark.sql.connector.metric.CustomMetric
 import org.apache.spark.sql.connector.write.{BatchWrite, DataWriterFactory, LogicalWriteInfoImpl, PhysicalWriteInfoImpl, V1Write, Write, WriterCommitMessage}
@@ -71,9 +71,17 @@ case class CreateTableAsSelectExec(
     partitioning: Seq[Transform],
     plan: LogicalPlan,
     query: SparkPlan,
-    properties: Map[String, String],
+    tableSpec: TableSpec,
     writeOptions: CaseInsensitiveStringMap,
     ifNotExists: Boolean) extends TableWriteExecHelper {
+
+  val properties = {
+    val props = CatalogV2Util.convertTableProperties(
+      tableSpec.properties, tableSpec.options, tableSpec.serde,
+      tableSpec.location, tableSpec.comment, tableSpec.provider,
+      tableSpec.external)
+    CatalogV2Util.withDefaultOwnership(props)
+  }
 
   override protected def run(): Seq[InternalRow] = {
     if (catalog.tableExists(ident)) {
@@ -109,9 +117,17 @@ case class AtomicCreateTableAsSelectExec(
     partitioning: Seq[Transform],
     plan: LogicalPlan,
     query: SparkPlan,
-    properties: Map[String, String],
+    tableSpec: TableSpec,
     writeOptions: CaseInsensitiveStringMap,
     ifNotExists: Boolean) extends TableWriteExecHelper {
+
+  val properties = {
+    val props = CatalogV2Util.convertTableProperties(
+      tableSpec.properties, tableSpec.options, tableSpec.serde,
+      tableSpec.location, tableSpec.comment, tableSpec.provider,
+      tableSpec.external)
+    CatalogV2Util.withDefaultOwnership(props)
+  }
 
   override protected def run(): Seq[InternalRow] = {
     if (catalog.tableExists(ident)) {
