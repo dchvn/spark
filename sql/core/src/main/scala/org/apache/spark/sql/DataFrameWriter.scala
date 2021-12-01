@@ -23,7 +23,7 @@ import scala.collection.JavaConverters._
 
 import org.apache.spark.annotation.Stable
 import org.apache.spark.sql.catalyst.TableIdentifier
-import org.apache.spark.sql.catalyst.analysis.{EliminateSubqueryAliases, NoSuchTableException, UnresolvedDBObjectName, UnresolvedRelation}
+import org.apache.spark.sql.catalyst.analysis.{EliminateSubqueryAliases, NoSuchTableException, ResolvedDBObjectName, UnresolvedDBObjectName, UnresolvedRelation}
 import org.apache.spark.sql.catalyst.catalog._
 import org.apache.spark.sql.catalyst.expressions.Literal
 import org.apache.spark.sql.catalyst.plans.logical.{AppendData, CreateTableAsSelect, InsertIntoStatement, LogicalPlan, OverwriteByExpression, OverwritePartitionsDynamic, ReplaceTableAsSelectStatement, TableSpec}
@@ -323,7 +323,10 @@ final class DataFrameWriter[T] private[sql](ds: Dataset[T]) {
           provider match {
             case supportsExtract: SupportsCatalogOptions =>
               val ident = supportsExtract.extractIdentifier(dsOptions)
-              val catalog = if (ident.namespace().isEmpty) {
+              val catalog = CatalogV2Util.getTableProviderCatalog(
+                supportsExtract, catalogManager, dsOptions)
+
+              val namespaces = if (ident.namespace().isEmpty) {
                 Array(dsOptions.get("catalog"))
               } else {
                 ident.namespace()
@@ -341,9 +344,9 @@ final class DataFrameWriter[T] private[sql](ds: Dataset[T]) {
                 external = false)
               runCommand(df.sparkSession) {
                 CreateTableAsSelect(
-                  UnresolvedDBObjectName(
-                    catalog.toSeq :+ ident.name,
-                    isNamespace = false
+                  ResolvedDBObjectName(
+                    catalog,
+                    namespaces.toSeq :+ ident.name()
                   ),
                   partitioningAsV2,
                   df.queryExecution.analyzed,
