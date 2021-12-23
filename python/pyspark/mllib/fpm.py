@@ -53,7 +53,7 @@ class FPGrowthModel(JavaModelWrapper, JavaSaveable, JavaLoader["FPGrowthModel"],
     """
 
     @since("1.4.0")
-    def freqItemsets(self) -> RDD[FPGrowth.FreqItemset[T]]:
+    def freqItemsets(self) -> RDD["FPGrowth.FreqItemset[T]"]:  # type: ignore[misc]
         """
         Returns the frequent itemsets of this model.
         """
@@ -104,7 +104,7 @@ class FPGrowth:
         model = callMLlibFunc("trainFPGrowthModel", data, float(minSupport), int(numPartitions))
         return FPGrowthModel(model)
 
-    class FreqItemset(namedtuple("FreqItemset", ["items", "freq"])):
+    class FreqItemset(namedtuple("FreqItemset", ["items", "freq"]), Generic[T]):
         """
         Represents an (items, freq) tuple.
 
@@ -133,7 +133,7 @@ class PrefixSpanModel(JavaModelWrapper, Generic[T]):
     """
 
     @since("1.6.0")
-    def freqSequences(self) -> RDD[PrefixSpan.FreqSequence[T]]:
+    def freqSequences(self) -> RDD["PrefixSpan.FreqSequence[T]"]:  # type: ignore[misc]
         """Gets frequent sequences"""
         return cast(Union[Any, Any, Any], self.call("getFreqSequences")).map(
             lambda x: PrefixSpan.FreqSequence(x[0], x[1])
