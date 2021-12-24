@@ -36,6 +36,8 @@ from typing import (
     TYPE_CHECKING,
 )
 
+import numpy
+import pandas
 from py4j.java_gateway import JavaObject  # type: ignore[import]
 
 from pyspark import SparkConf, SparkContext, since
@@ -775,7 +777,8 @@ class SparkSession(SparkConversionMixin):
         verifySchema: bool = True,
     ) -> DataFrame:
         """
-        Creates a :class:`DataFrame` from an :class:`RDD`, a list or a :class:`pandas.DataFrame`.
+        Creates a :class:`DataFrame` from an :class:`RDD`, a list or a :class:`pandas.DataFrame`,
+        numpy.arange()
 
         When ``schema`` is a list of column names, the type of each column
         will be inferred from ``data``.
@@ -933,6 +936,9 @@ class SparkSession(SparkConversionMixin):
 
         if isinstance(data, RDD):
             rdd, struct = self._createFromRDD(data.map(prepare), schema, samplingRatio)
+        elif isinstance(data, numpy.ndarray):
+            data = pandas.DataFrame(data)
+            return self.createDataFrame(data, schema, samplingRatio, verifySchema)
         else:
             rdd, struct = self._createFromLocal(map(prepare, data), schema)
         assert self._jvm is not None
