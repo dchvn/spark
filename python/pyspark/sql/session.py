@@ -937,8 +937,9 @@ class SparkSession(SparkConversionMixin):
         if isinstance(data, RDD):
             rdd, struct = self._createFromRDD(data.map(prepare), schema, samplingRatio)
         elif isinstance(data, numpy.ndarray):
-            data = pandas.DataFrame(data)
-            return self.createDataFrame(data, schema, samplingRatio, verifySchema)
+            return super(SparkSession, self).createDataFrame(  # type: ignore[call-overload]
+                pandas.DataFrame(data), schema, samplingRatio, verifySchema
+            )
         else:
             rdd, struct = self._createFromLocal(map(prepare, data), schema)
         assert self._jvm is not None
