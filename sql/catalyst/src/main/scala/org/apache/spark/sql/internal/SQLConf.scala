@@ -198,7 +198,7 @@ object SQLConf {
    * run unit tests (that does not involve SparkSession) in serial order.
    */
   def get: SQLConf = {
-    if (TaskContext.get != null) {
+    if (Utils.isInRunningSparkTask) {
       val conf = existingConf.get()
       if (conf != null) {
         conf
@@ -2663,16 +2663,15 @@ object SQLConf {
       "and/or identifiers for table, view, function, etc.")
     .version("3.3.0")
     .booleanConf
-    .createWithDefault(true)
+    .createWithDefault(false)
 
-  val ALLOW_CAST_BETWEEN_DATETIME_AND_NUMERIC_IN_ANSI =
-    buildConf("spark.sql.ansi.allowCastBetweenDatetimeAndNumeric")
-      .doc("When true, the data type conversions between datetime types and numeric types are " +
-        "allowed in ANSI SQL mode. This configuration is only effective when " +
-        s"'${ANSI_ENABLED.key}' is true.")
-      .version("3.3.0")
-      .booleanConf
-      .createWithDefault(false)
+  val ANSI_STRICT_INDEX_OPERATOR = buildConf("spark.sql.ansi.strictIndexOperator")
+    .doc(s"When true and '${ANSI_ENABLED.key}' is true, accessing complex SQL types via [] " +
+      "operator will throw an exception if array index is out of bound, or map key does not " +
+      "exist. Otherwise, Spark will return a null result when accessing an invalid index.")
+    .version("3.3.0")
+    .booleanConf
+    .createWithDefault(true)
 
   val SORT_BEFORE_REPARTITION =
     buildConf("spark.sql.execution.sortBeforeRepartition")
@@ -4139,8 +4138,7 @@ class SQLConf extends Serializable with Logging {
 
   def enforceReservedKeywords: Boolean = ansiEnabled && getConf(ENFORCE_RESERVED_KEYWORDS)
 
-  def allowCastBetweenDatetimeAndNumericInAnsi: Boolean =
-    getConf(ALLOW_CAST_BETWEEN_DATETIME_AND_NUMERIC_IN_ANSI)
+  def strictIndexOperator: Boolean = ansiEnabled && getConf(ANSI_STRICT_INDEX_OPERATOR)
 
   def timestampType: AtomicType = getConf(TIMESTAMP_TYPE) match {
     case "TIMESTAMP_LTZ" =>

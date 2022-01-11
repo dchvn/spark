@@ -40,6 +40,7 @@ import org.apache.spark.sql.functions.max
 import org.apache.spark.sql.hive.test.TestHiveSingleton
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.test.SQLTestUtils
+import org.apache.spark.tags.SlowHiveTest
 import org.apache.spark.util.Utils
 
 case class Fields(f1: Int, f2: Int, f3: Int, f4: Int, f5: Int)
@@ -53,6 +54,7 @@ case class ListStringCaseClass(l: Seq[String])
 /**
  * A test suite for Hive custom UDFs.
  */
+@SlowHiveTest
 class HiveUDFSuite extends QueryTest with TestHiveSingleton with SQLTestUtils {
 
   import spark.udf
@@ -563,6 +565,14 @@ class HiveUDFSuite extends QueryTest with TestHiveSingleton with SQLTestUtils {
         assert(sql("show functions").count() ==
           numFunc + FunctionsCommand.virtualOperators.size + 1)
         assert(spark.catalog.listFunctions().count() == numFunc + 1)
+
+        withDatabase("db2") {
+          sql("CREATE DATABASE db2")
+          sql(s"CREATE FUNCTION db2.testUDFToListInt AS '${classOf[UDFToListInt].getName}'")
+          checkAnswer(
+            sql("SHOW FUNCTIONS IN db2 LIKE 'testUDF*'"),
+            Seq(Row("db2.testudftolistint")))
+        }
       }
     }
   }
