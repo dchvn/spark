@@ -562,9 +562,9 @@ class RDD(Generic[T_co]):
         [1, 2, 3]
         """
         return (
-            self.map(lambda x: (x, None))  # type: ignore[misc]
+            self.map(lambda x: (x, None))
             .reduceByKey(lambda x, _: x, numPartitions)
-            .map(lambda x: x[0])  # type: ignore[arg-type]
+            .map(lambda x: x[0])
         )
 
     def sample(
@@ -830,7 +830,7 @@ class RDD(Generic[T_co]):
         ...
 
     def repartitionAndSortWithinPartitions(  # type: ignore[misc]
-        self: Union["RDD[Tuple[O, V]]", "RDD[Tuple[K, V]]" ],
+        self,
         numPartitions: Optional[int] = None,
         partitionFunc: Union[Callable[[O], int], Callable[[K], int]] = portable_hash,
         ascending: bool = True,
@@ -857,7 +857,7 @@ class RDD(Generic[T_co]):
             sort = ExternalSorter(memory * 0.9, serializer).sorted
             return iter(sort(iterator, key=lambda k_v: keyfunc(k_v[0]), reverse=(not ascending)))  # type: ignore[misc]
 
-        return self.partitionBy(numPartitions, partitionFunc).mapPartitions(sortPartition, True)  # type: ignore[arg-type]
+        return self.partitionBy(numPartitions, partitionFunc).mapPartitions(sortPartition, True)
 
     @overload
     def sortByKey(
@@ -885,11 +885,12 @@ class RDD(Generic[T_co]):
         keyfunc: Callable[[K], O],
     ) -> "RDD[Tuple[K, V]]":
         ...
+
     def sortByKey(  # type: ignore[misc]
-        self: Union["RDD[Tuple[K, V]]", "RDD[Tuple[K, O]]"],
+        self: "RDD[Tuple[K, V]]",
         ascending: bool = True,
         numPartitions: Optional[int] = None,
-        keyfunc: Optional[Callable[[K], K]] = lambda x: x) -> Union["RDD[Tuple[K, V]]", "RDD[Tuple[K, O]]"]:
+        keyfunc: Optional[Callable[[K], K]] = lambda x: x) ->"RDD[Tuple[K, V]]":
 
         """
         Sorts this RDD, which is assumed to consist of (key, value) pairs.
@@ -931,8 +932,9 @@ class RDD(Generic[T_co]):
             return self  # empty RDD
         maxSampleSize = numPartitions * 20.0  # constant from Spark's RangePartitioner
         fraction = min(maxSampleSize / max(rddSize, 1), 1.0)
-        samples = self.sample(False, fraction, 1).map(lambda kv: kv[0]).collect()
-        samples = sorted(samples, key=keyfunc)
+        samples = self.sample(False, fraction, 1).map(lambda kv: kv[0]).collect()  # type: ignore[misc]
+        assert keyfunc is not None
+        samples = sorted(samples, key=keyfunc)  # type: ignore[arg-type]
 
         # we have numPartitions many parts but one of the them has
         # an implicit boundary
@@ -966,7 +968,7 @@ class RDD(Generic[T_co]):
         >>> sc.parallelize(tmp).sortBy(lambda x: x[1]).collect()
         [('a', 1), ('b', 2), ('1', 3), ('d', 4), ('2', 5)]
         """
-        return self.keyBy(keyfunc).sortByKey(ascending, numPartitions).values()
+        return self.keyBy(keyfunc).sortByKey(ascending, numPartitions).values()  # type: ignore[type-var, return-value]
 
     def glom(self) -> "RDD[List[T_co]]":
         """
@@ -1006,7 +1008,7 @@ class RDD(Generic[T_co]):
         f: Callable[[T_co], K],
         numPartitions: Optional[int] = None,
         partitionFunc: Callable[[K], int] = portable_hash,
-    ) -> "RDD[Tuple[K, Iterable[Tuple[K, T_co]]]]":
+    ) -> "RDD[Tuple[K, Iterable[T_co]]]":
         ...
         """
         Return an RDD of grouped items.
@@ -1018,7 +1020,7 @@ class RDD(Generic[T_co]):
         >>> sorted([(x, sorted(y)) for (x, y) in result])
         [(0, [2, 8]), (1, [1, 1, 3, 5])]
         """
-        return self.map(lambda x: (f(x), x)).groupByKey(numPartitions, partitionFunc)  # type: ignore[misc]
+        return self.map(lambda x: (f(x), x)).groupByKey(numPartitions, partitionFunc)
 
     def pipe(self, command: str, env: Optional[Dict[str, str]] = None, checkCode: bool = False) -> "RDD[str]":
         """
@@ -1044,7 +1046,7 @@ class RDD(Generic[T_co]):
         def func(iterator: Any) -> Generator[str, Any, None]:
             pipe = Popen(shlex.split(command), env=env, stdin=PIPE, stdout=PIPE)
 
-            def pipe_objs(out) -> None :
+            def pipe_objs(out: Any) -> None:
                 for obj in iterator:
                     s = str(obj).rstrip("\n") + "\n"
                     out.write(s.encode("utf-8"))
@@ -1118,7 +1120,9 @@ class RDD(Generic[T_co]):
         This method should only be used if the resulting array is expected
         to be small, as all the data is loaded into the driver's memory.
         """
+
         with SCCallSiteSync(self.context):
+            assert self.ctx._jvm is not None
             sock_info = self.ctx._jvm.PythonRDD.collectAndServe(self._jrdd.rdd())
         return list(_load_from_socket(sock_info, self._jrdd_deserializer))
 
@@ -1137,6 +1141,7 @@ class RDD(Generic[T_co]):
         )
 
         with SCCallSiteSync(self.context):
+            assert self.ctx._jvm is not None
             sock_info = self.ctx._jvm.PythonRDD.collectAndServeWithJobGroup(
                 self._jrdd.rdd(), groupId, description, interruptOnCancel
             )
@@ -1161,7 +1166,7 @@ class RDD(Generic[T_co]):
         """
         f = fail_on_stopiteration(f)
 
-        def func(iterator):
+        def func(iterator: Iterator) -> Generator[T_co, Any, None]:
             iterator = iter(iterator)
             try:
                 initial = next(iterator)
@@ -1174,7 +1179,7 @@ class RDD(Generic[T_co]):
             return reduce(f, vals)
         raise ValueError("Can not reduce() empty RDD")
 
-    def treeReduce(self, f: Callable[[T_co, T_co], T_co], depth: int = 2) -> T_co:
+    def treeReduce(self, f: Callable[[T_co, T_co], T_co], depth: int = 2) -> Optional[T_co]:
         """
         Reduces the elements of this RDD in a multi-level tree pattern.
 
@@ -1204,7 +1209,7 @@ class RDD(Generic[T_co]):
 
         zeroValue = None, True  # Use the second entry to indicate whether this is a dummy value.
 
-        def op(x, y):
+        def op(x: Any, y: Any) -> Union[Any, Any, tuple[Any, bool]]:
             if x[1]:
                 return y
             elif y[1]:
@@ -1212,12 +1217,12 @@ class RDD(Generic[T_co]):
             else:
                 return f(x[0], y[0]), False
 
-        reduced = self.map(lambda x: (x, False)).treeAggregate(zeroValue, op, op, depth)
+        reduced = self.map(lambda x: (x, False)).treeAggregate(zeroValue, op, op, depth)  # type: ignore[misc]
         if reduced[1]:
             raise ValueError("Cannot reduce empty RDD.")
         return reduced[0]
 
-    def fold(self, zeroValue: T, op: Callable[[T_co, T_co], T_co]) -> T_co:
+    def fold(self, zeroValue: Union[T, T_co], op: Callable[[T_co, T_co], T_co]) -> T_co:
         """
         Aggregate the elements of each partition, and then the results for all
         the partitions, using a given associative function and a neutral "zero value."
@@ -1242,7 +1247,7 @@ class RDD(Generic[T_co]):
         """
         op = fail_on_stopiteration(op)
 
-        def func(iterator):
+        def func(iterator: Iterator[T_co]) -> Generator[T, Any, None]:
             acc = zeroValue
             for obj in iterator:
                 acc = op(acc, obj)
@@ -1280,7 +1285,7 @@ class RDD(Generic[T_co]):
         seqOp = fail_on_stopiteration(seqOp)
         combOp = fail_on_stopiteration(combOp)
 
-        def func(iterator):
+        def func(iterator: Iterator) -> Callable[[U, T_co], U]:
             acc = zeroValue
             for obj in iterator:
                 acc = seqOp(acc, obj)
@@ -1327,7 +1332,7 @@ class RDD(Generic[T_co]):
         if self.getNumPartitions() == 0:
             return zeroValue
 
-        def aggregatePartition(iterator):
+        def aggregatePartition(iterator) -> Generator[U, Any, None]:
             acc = zeroValue
             for obj in iterator:
                 acc = seqOp(acc, obj)
@@ -1359,9 +1364,10 @@ class RDD(Generic[T_co]):
         ...
 
     @overload
-    def max(self, key: Callable[[T_co], O]) -> T_co: ...
+    def max(self, key: Callable[[T_co], O]) -> T_co:
+        ...
 
-    def max(self: Optional["RDD[O]"], key: Optional[Callable[[T_co], O]] = None) -> Union[O, T_co]:
+    def max(self, key: Optional[Callable[[T_co], O]] = None) -> Union[O, T_co]:
         """
         Find the maximum item in this RDD.
 
@@ -1390,7 +1396,7 @@ class RDD(Generic[T_co]):
     def min(self, key: Callable[[T_co], O]) -> T_co:
         ...
 
-    def min(self: Optional["RDD[O]"], key: Optional[Callable[[T_co], O]] = None) -> Optional[O, T_co]:
+    def min(self, key: Optional[Callable[[T_co], O]] = None) -> Optional[O, T_co]:
         """
         Find the minimum item in this RDD.
 
@@ -1439,7 +1445,7 @@ class RDD(Generic[T_co]):
         and count of the RDD's elements in one operation.
         """
 
-        def redFunc(left_counter, right_counter):
+        def redFunc(left_counter: StatCounter, right_counter: StatCounter) -> StatCounter:
             return left_counter.mergeStats(right_counter)
 
         return self.mapPartitions(lambda i: [StatCounter(i)]).reduce(redFunc)
@@ -1488,7 +1494,7 @@ class RDD(Generic[T_co]):
                 raise ValueError("number of buckets must be >= 1")
 
             # filter out non-comparable elements
-            def comparable(x):
+            def comparable(x: Any) -> bool:
                 if x is None:
                     return False
                 if type(x) is float and isnan(x):
@@ -1557,7 +1563,7 @@ class RDD(Generic[T_co]):
         else:
             raise TypeError("buckets should be a list or tuple or number(int or long)")
 
-        def histogram(iterator):
+        def histogram(iterator: Iterator) -> list:
             counters = [0] * len(buckets)
             for i in iterator:
                 if i is None or (type(i) is float and isnan(i)) or i > maxv or i < minv:
@@ -1569,7 +1575,7 @@ class RDD(Generic[T_co]):
             counters[-1] += last
             return [counters]
 
-        def mergeCounters(a, b):
+        def mergeCounters(a: StatCounter, b: StatCounter) -> StatCounter:
             return [i + j for i, j in zip(a, b)]
 
         return buckets, self.mapPartitions(histogram).reduce(mergeCounters)
@@ -1685,10 +1691,10 @@ class RDD(Generic[T_co]):
         [4, 3, 2]
         """
 
-        def topIterator(iterator):
+        def topIterator(iterator: Iterator) -> Generator[list[T_co], Any, None]:
             yield heapq.nlargest(num, iterator, key=key)
 
-        def merge(a, b):
+        def merge(a, b) -> list[T_co]:
             return heapq.nlargest(num, a + b, key=key)
 
         return self.mapPartitions(topIterator).reduce(merge)
@@ -2073,7 +2079,7 @@ class RDD(Generic[T_co]):
         'bar\\nfoo\\n'
         """
 
-        def func(split, iterator):
+        def func(split: Any, iterator: Iterator) -> Generator[bytes, Any, None]:
             for x in iterator:
                 if not isinstance(x, (str, bytes)):
                     x = str(x)
@@ -2176,13 +2182,13 @@ class RDD(Generic[T_co]):
         """
         func = fail_on_stopiteration(func)
 
-        def reducePartition(iterator):
+        def reducePartition(iterator: Iterator) -> Generator[dict, Any, None]:
             m = {}
             for k, v in iterator:
                 m[k] = func(m[k], v) if k in m else v
             yield m
 
-        def mergeMaps(m1, m2):
+        def mergeMaps(m1, m2) -> Callable:
             for k, v in m2.items():
                 m1[k] = func(m1[k], v) if k in m1 else v
             return m1
@@ -2432,7 +2438,7 @@ class RDD(Generic[T_co]):
         memory = self._memory_limit()
         agg = Aggregator(createCombiner, mergeValue, mergeCombiners)
 
-        def combineLocally(iterator):
+        def combineLocally(iterator: Iterator) -> Union[Iterator, Generator[tuple[Any, Any], Any, None]]:
             merger = ExternalMerger(agg, memory * 0.9, serializer)
             merger.mergeValues(iterator)
             return merger.items()
@@ -2440,7 +2446,7 @@ class RDD(Generic[T_co]):
         locally_combined = self.mapPartitions(combineLocally, preservesPartitioning=True)
         shuffled = locally_combined.partitionBy(numPartitions, partitionFunc)
 
-        def _mergeCombiners(iterator):
+        def _mergeCombiners(iterator: Iterator) -> Union[Iterator, Generator[tuple[Any, Any], Any, None]]:
             merger = ExternalMerger(agg, memory, serializer)
             merger.mergeCombiners(iterator)
             return merger.items()
@@ -2465,7 +2471,7 @@ class RDD(Generic[T_co]):
         allowed to modify and return their first argument instead of creating a new U.
         """
 
-        def createZero():
+        def createZero() -> U:
             return copy.deepcopy(zeroValue)
 
         return self.combineByKey(
@@ -2528,10 +2534,10 @@ class RDD(Generic[T_co]):
         [('a', [1, 1]), ('b', [1])]
         """
 
-        def createCombiner(x):
+        def createCombiner(x: Any) -> list:
             return [x]
 
-        def mergeValue(xs, x):
+        def mergeValue(xs, x: Any):
             xs.append(x)
             return xs
 
@@ -2543,7 +2549,7 @@ class RDD(Generic[T_co]):
         serializer = self._jrdd_deserializer
         agg = Aggregator(createCombiner, mergeValue, mergeCombiners)
 
-        def combine(iterator):
+        def combine(iterator: Iterator) -> Union[Iterator, Generator[tuple[Any, Any], Any, None]]:
             merger = ExternalMerger(agg, memory * 0.9, serializer)
             merger.mergeValues(iterator)
             return merger.items()
@@ -2551,7 +2557,7 @@ class RDD(Generic[T_co]):
         locally_combined = self.mapPartitions(combine, preservesPartitioning=True)
         shuffled = locally_combined.partitionBy(numPartitions, partitionFunc)
 
-        def groupByKey(it):
+        def groupByKey(it: Iterator) -> Union[Iterator, Generator[tuple[Any, Any], Any, None]]:
             merger = ExternalGroupBy(agg, memory, serializer)
             merger.mergeCombiners(it)
             return merger.items()
@@ -2702,7 +2708,7 @@ class RDD(Generic[T_co]):
         [('b', 4), ('b', 5)]
         """
 
-        def filter_func(pair):
+        def filter_func(pair: Any) -> bool:
             key, (val1, val2) = pair
             return val1 and not val2
 
