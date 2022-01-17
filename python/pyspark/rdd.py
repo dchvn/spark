@@ -32,7 +32,7 @@ from itertools import chain
 from functools import reduce
 from math import sqrt, log, isinf, isnan, pow, ceil
 from typing import Literal, Hashable, Callable, Any, TypeVar, Optional, Iterable, List, Union, Tuple, Dict, overload, \
-    Iterator, Generic, Generator
+    Iterator, Generic, Generator, cast
 
 from numpy import int64, int32, float32, float64, ndarray
 from py4j.java_gateway import JavaObject
@@ -440,7 +440,7 @@ class RDD(Generic[T_co]):
         [('a', 1), ('b', 1), ('c', 1)]
         """
 
-        def func(_: Any, iterator: Iterator) -> Iterator:
+        def func(_: Any, iterator: Iterator[T]) -> Iterator[U]:
             return map(fail_on_stopiteration(f), iterator)
 
         return self.mapPartitionsWithIndex(func, preservesPartitioning)  # type: ignore[arg-type]
@@ -459,7 +459,7 @@ class RDD(Generic[T_co]):
         [(2, 2), (2, 2), (3, 3), (3, 3), (4, 4), (4, 4)]
         """
 
-        def func(s: Any, iterator: Iterator) -> Iterator:
+        def func(s: Any, iterator: Iterator[T]) -> Iterator[U]:
             return chain.from_iterable(map(fail_on_stopiteration(f), iterator))
 
         return self.mapPartitionsWithIndex(func, preservesPartitioning)  # type: ignore[arg-type]
@@ -476,7 +476,7 @@ class RDD(Generic[T_co]):
         [3, 7]
         """
 
-        def func(s: Any, iterator: Iterator) -> Iterable[U]:
+        def func(s: Any, iterator: Iterator[T_co]) -> Iterable[U]:
             return f(iterator)
 
         return self.mapPartitionsWithIndex(func, preservesPartitioning)  # type: ignore[arg-type]
@@ -562,9 +562,9 @@ class RDD(Generic[T_co]):
         [1, 2, 3]
         """
         return (
-            self.map(lambda x: (x, None))
+            self.map(lambda x: (x, None))  # type: ignore[misc]
             .reduceByKey(lambda x, _: x, numPartitions)
-            .map(lambda x: x[0])
+            .map(lambda x: x[0])  # type: ignore[arg-type, return-value]
         )
 
     def sample(
@@ -772,8 +772,8 @@ class RDD(Generic[T_co]):
         [1, 2, 3]
         """
         return (
-            self.map(lambda v: (v, None))
-            .cogroup(other.map(lambda v: (v, None)))
+            self.map(lambda v: (v, None))  # type: ignore[misc]
+            .cogroup(other.map(lambda v: (v, None)))  # type: ignore[arg-type, return-value]
             .filter(lambda k_vs: all(k_vs[1]))
             .keys()
         )
@@ -857,7 +857,7 @@ class RDD(Generic[T_co]):
             sort = ExternalSorter(memory * 0.9, serializer).sorted
             return iter(sort(iterator, key=lambda k_v: keyfunc(k_v[0]), reverse=(not ascending)))  # type: ignore[misc]
 
-        return self.partitionBy(numPartitions, partitionFunc).mapPartitions(sortPartition, True)
+        return self.partitionBy(numPartitions, partitionFunc).mapPartitions(sortPartition, True)  # type: ignore[misc, arg-type]
 
     @overload
     def sortByKey(
@@ -1009,7 +1009,7 @@ class RDD(Generic[T_co]):
         numPartitions: Optional[int] = None,
         partitionFunc: Callable[[K], int] = portable_hash,
     ) -> "RDD[Tuple[K, Iterable[T_co]]]":
-        ...
+
         """
         Return an RDD of grouped items.
 
@@ -1020,7 +1020,7 @@ class RDD(Generic[T_co]):
         >>> sorted([(x, sorted(y)) for (x, y) in result])
         [(0, [2, 8]), (1, [1, 1, 3, 5])]
         """
-        return self.map(lambda x: (f(x), x)).groupByKey(numPartitions, partitionFunc)
+        return self.map(lambda x: (f(x), x)).groupByKey(numPartitions, partitionFunc)  # type: ignore[return-value, misc]
 
     def pipe(self, command: str, env: Optional[Dict[str, str]] = None, checkCode: bool = False) -> "RDD[str]":
         """
@@ -1065,8 +1065,9 @@ class RDD(Generic[T_co]):
                     for i in range(0):
                         yield i
 
+            assert pipe.stdout is not None
             return (
-                x.rstrip(b"\n").decode("utf-8")
+                x.rstrip(b"\n").decode("utf-8")  # type: ignore[attr-defined]
                 for x in chain(iter(pipe.stdout.readline, b""), check_return_code())
             )
 
@@ -1102,7 +1103,7 @@ class RDD(Generic[T_co]):
         >>> sc.parallelize([1, 2, 3, 4, 5]).foreachPartition(f)
         """
 
-        def func(it: Any) -> Iterator:
+        def func(it: Iterable[T_co]) -> Iterator[U]:
             r = f(it)
             try:
                 return iter(r)
@@ -1174,7 +1175,7 @@ class RDD(Generic[T_co]):
                 return
             yield reduce(f, iterator, initial)
 
-        vals = self.mapPartitions(func).collect()
+        vals = self.mapPartitions(func).collect()  # type: ignore[arg-type]
         if vals:
             return reduce(f, vals)
         raise ValueError("Can not reduce() empty RDD")
@@ -1222,7 +1223,7 @@ class RDD(Generic[T_co]):
             raise ValueError("Cannot reduce empty RDD.")
         return reduced[0]
 
-    def fold(self, zeroValue: Union[T, T_co], op: Callable[[T_co, T_co], T_co]) -> T_co:
+    def fold(self, zeroValue: Union[T_co, U, T], op: Callable[[T_co, T_co], T_co]) -> T_co:
         """
         Aggregate the elements of each partition, and then the results for all
         the partitions, using a given associative function and a neutral "zero value."
@@ -1247,11 +1248,11 @@ class RDD(Generic[T_co]):
         """
         op = fail_on_stopiteration(op)
 
-        def func(iterator: Iterator[T_co]) -> Generator[T, Any, None]:
+        def func(iterator: Iterator[T_co]) -> Iterator[U]:
             acc = zeroValue
             for obj in iterator:
-                acc = op(acc, obj)
-            yield acc
+                acc = op(acc, obj)  # type: ignore[arg-type]
+            yield acc  # type: ignore[misc]
 
         # collecting result of mapPartitions here ensures that the copy of
         # zeroValue provided to each partition is unique from the one provided
@@ -1285,7 +1286,7 @@ class RDD(Generic[T_co]):
         seqOp = fail_on_stopiteration(seqOp)
         combOp = fail_on_stopiteration(combOp)
 
-        def func(iterator: Iterator) -> Callable[[U, T_co], U]:
+        def func(iterator: Iterator[T_co]) -> Iterator[U]:
             acc = zeroValue
             for obj in iterator:
                 acc = seqOp(acc, obj)
@@ -1294,7 +1295,7 @@ class RDD(Generic[T_co]):
         # collecting result of mapPartitions here ensures that the copy of
         # zeroValue provided to each partition is unique from the one provided
         # to the final reduce call
-        vals = self.mapPartitions(func).collect()
+        vals = self.mapPartitions(func).collect()  # type: ignore[arg-type]
         return reduce(combOp, vals, zeroValue)
 
     def treeAggregate(
@@ -1332,27 +1333,27 @@ class RDD(Generic[T_co]):
         if self.getNumPartitions() == 0:
             return zeroValue
 
-        def aggregatePartition(iterator) -> Generator[U, Any, None]:
+        def aggregatePartition(iterator: Iterator[T]) -> Generator[U, Any, None]:
             acc = zeroValue
             for obj in iterator:
-                acc = seqOp(acc, obj)
+                acc = seqOp(acc, obj)  # type: ignore[arg-type]
             yield acc
 
-        partiallyAggregated = self.mapPartitions(aggregatePartition)
+        partiallyAggregated = self.mapPartitions(aggregatePartition)  # type: ignore[arg-type]
         numPartitions = partiallyAggregated.getNumPartitions()
         scale = max(int(ceil(pow(numPartitions, 1.0 / depth))), 2)
         # If creating an extra level doesn't help reduce the wall-clock time, we stop the tree
         # aggregation.
         while numPartitions > scale + numPartitions / scale:
-            numPartitions /= scale
+            numPartitions /= scale  # type: ignore[assignment]
             curNumPartitions = int(numPartitions)
 
-            def mapPartition(i, iterator):
+            def mapPartition(i: Any, iterator: Iterator[T]) -> Generator[tuple[int, Any], Any, None]:
                 for obj in iterator:
                     yield (i % curNumPartitions, obj)
 
             partiallyAggregated = (
-                partiallyAggregated.mapPartitionsWithIndex(mapPartition)
+                partiallyAggregated.mapPartitionsWithIndex(mapPartition)  # type: ignore[arg-type]
                 .reduceByKey(combOp, curNumPartitions)
                 .values()
             )
@@ -1386,7 +1387,7 @@ class RDD(Generic[T_co]):
         """
         if key is None:
             return self.reduce(max)
-        return self.reduce(lambda a, b: max(a, b, key=key))
+        return self.reduce(lambda a, b: max(a, b, key=key))  # type: ignore[arg-type, misc]
 
     @overload
     def min(self: "RDD[O]") -> O:
