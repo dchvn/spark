@@ -1368,7 +1368,7 @@ class RDD(Generic[T_co]):
     def max(self, key: Callable[[T_co], O]) -> T_co:
         ...
 
-    def max(self, key: Optional[Callable[[T_co], O]] = None) -> Union[O, T_co]:
+    def max(self: "RDD[O]", key: Optional[Callable[[T_co], O]] = None) -> Union[O, T_co]:  # type: ignore[misc]
         """
         Find the maximum item in this RDD.
 
@@ -1386,7 +1386,7 @@ class RDD(Generic[T_co]):
         5.0
         """
         if key is None:
-            return self.reduce(max)
+            return self.reduce(max)  # type: ignore[arg-type]
         return self.reduce(lambda a, b: max(a, b, key=key))  # type: ignore[arg-type, misc]
 
     @overload
@@ -1397,7 +1397,7 @@ class RDD(Generic[T_co]):
     def min(self, key: Callable[[T_co], O]) -> T_co:
         ...
 
-    def min(self, key: Optional[Callable[[T_co], O]] = None) -> Optional[O, T_co]:
+    def min(self: "RDD[O]", key: Optional[Callable[[T_co], O]] = None) -> Union[O, T_co]:  # type: ignore[misc]
         """
         Find the minimum item in this RDD.
 
@@ -1415,8 +1415,8 @@ class RDD(Generic[T_co]):
         10.0
         """
         if key is None:
-            return self.reduce(min)
-        return self.reduce(lambda a, b: min(a, b, key=key))
+            return self.reduce(min)  # type: ignore[arg-type]
+        return self.reduce(lambda a, b: min(a, b, key=key))  # type: ignore[arg-type]
 
     def sum(self: "RDD[NumberOrArray]") -> NumberOrArray:
         """
@@ -1427,7 +1427,7 @@ class RDD(Generic[T_co]):
         >>> sc.parallelize([1.0, 2.0, 3.0]).sum()
         6.0
         """
-        return self.mapPartitions(lambda x: [sum(x)]).fold(0, operator.add)
+        return self.mapPartitions(lambda x: [sum(x)]).fold(0, operator.add)  # type: ignore[return-value]
 
     def count(self) -> int:
         """
@@ -1449,7 +1449,7 @@ class RDD(Generic[T_co]):
         def redFunc(left_counter: StatCounter, right_counter: StatCounter) -> StatCounter:
             return left_counter.mergeStats(right_counter)
 
-        return self.mapPartitions(lambda i: [StatCounter(i)]).reduce(redFunc)
+        return self.mapPartitions(lambda i: [StatCounter(i)]).reduce(redFunc)  # type: ignore[arg-type]
 
     def histogram(self, buckets: Union[int, List[T_co], Tuple[T_co, ...]]) -> Tuple[List[T_co], List[int]]:
         """
@@ -1505,11 +1505,11 @@ class RDD(Generic[T_co]):
             filtered = self.filter(comparable)
 
             # faster than stats()
-            def minmax(a, b):
+            def minmax(a: Any, b: Any) -> tuple:
                 return min(a[0], b[0]), max(a[1], b[1])
 
             try:
-                minv, maxv = filtered.map(lambda x: (x, x)).reduce(minmax)
+                minv, maxv = filtered.map(lambda x: (x, x)).reduce(minmax)  # type: ignore[misc, arg-type]
             except TypeError as e:
                 if " empty " in str(e):
                     raise ValueError("can not generate buckets from empty RDD")
@@ -1519,7 +1519,7 @@ class RDD(Generic[T_co]):
                 return [minv, maxv], [filtered.count()]
 
             try:
-                inc = (maxv - minv) / buckets
+                inc = (maxv - minv) / buckets  # type: ignore[operator]
             except TypeError:
                 raise TypeError("Can not generate buckets with non-number in RDD")
 
@@ -1528,8 +1528,8 @@ class RDD(Generic[T_co]):
 
             # keep them as integer if possible
             inc = int(inc)
-            if inc * buckets != maxv - minv:
-                inc = (maxv - minv) * 1.0 / buckets
+            if inc * buckets != maxv - minv:  # type: ignore[operator]
+                inc = (maxv - minv) * 1.0 / buckets  # type: ignore[operator]
 
             buckets = [i * inc + minv for i in range(buckets)]
             buckets.append(maxv)  # fix accumulated error
@@ -1542,7 +1542,7 @@ class RDD(Generic[T_co]):
             if any(i is None or isinstance(i, float) and isnan(i) for i in buckets):
                 raise ValueError("can not have None or NaN in buckets")
 
-            if sorted(buckets) != list(buckets):
+            if sorted(buckets) != list(buckets):  # type: ignore[type-var]
                 raise ValueError("buckets should be sorted")
 
             if len(set(buckets)) != len(buckets):
@@ -1553,23 +1553,23 @@ class RDD(Generic[T_co]):
             even = False
             inc = None
             try:
-                steps = [buckets[i + 1] - buckets[i] for i in range(len(buckets) - 1)]
+                steps = [buckets[i + 1] - buckets[i] for i in range(len(buckets) - 1)]  # type: ignore[operator]
             except TypeError:
                 pass  # objects in buckets do not support '-'
             else:
                 if max(steps) - min(steps) < 1e-10:  # handle precision errors
                     even = True
-                    inc = (maxv - minv) / (len(buckets) - 1)
+                    inc = (maxv - minv) / (len(buckets) - 1)  # type: ignore[operator]
 
         else:
             raise TypeError("buckets should be a list or tuple or number(int or long)")
 
         def histogram(iterator: Iterator) -> list:
-            counters = [0] * len(buckets)
+            counters = [0] * len(buckets)  # type: ignore[arg-type]
             for i in iterator:
                 if i is None or (type(i) is float and isnan(i)) or i > maxv or i < minv:
                     continue
-                t = int((i - minv) / inc) if even else bisect.bisect_right(buckets, i) - 1
+                t = int((i - minv) / inc) if even else bisect.bisect_right(buckets, i) - 1  # type: ignore[arg-type]
                 counters[t] += 1
             # add last two together
             last = counters.pop()
@@ -1577,9 +1577,9 @@ class RDD(Generic[T_co]):
             return [counters]
 
         def mergeCounters(a: StatCounter, b: StatCounter) -> StatCounter:
-            return [i + j for i, j in zip(a, b)]
+            return cast(StatCounter, [i + j for i, j in zip(a, b)])  # type: ignore[call-overload]
 
-        return buckets, self.mapPartitions(histogram).reduce(mergeCounters)
+        return buckets, self.mapPartitions(histogram).reduce(mergeCounters)  # type: ignore[return-value, arg-type]
 
     def mean(self: "RDD[NumberOrArray]") -> NumberOrArray:
         """
@@ -1590,7 +1590,7 @@ class RDD(Generic[T_co]):
         >>> sc.parallelize([1, 2, 3]).mean()
         2.0
         """
-        return self.stats().mean()
+        return self.stats().mean()  # type: ignore[return-value]
 
     def variance(self: "RDD[NumberOrArray]") -> NumberOrArray:
         """
@@ -1601,7 +1601,7 @@ class RDD(Generic[T_co]):
         >>> sc.parallelize([1, 2, 3]).variance()
         0.666...
         """
-        return self.stats().variance()
+        return self.stats().variance()  # type: ignore[return-value]
 
     def stdev(self: "RDD[NumberOrArray]") -> NumberOrArray:
         """
@@ -1612,7 +1612,7 @@ class RDD(Generic[T_co]):
         >>> sc.parallelize([1, 2, 3]).stdev()
         0.816...
         """
-        return self.stats().stdev()
+        return self.stats().stdev()  # type: ignore[return-value]
 
     def sampleStdev(self: "RDD[NumberOrArray]") -> NumberOrArray:
         """
@@ -1625,7 +1625,7 @@ class RDD(Generic[T_co]):
         >>> sc.parallelize([1, 2, 3]).sampleStdev()
         1.0
         """
-        return self.stats().sampleStdev()
+        return self.stats().sampleStdev()  # type: ignore[return-value]
 
     def sampleVariance(self: "RDD[NumberOrArray]") -> NumberOrArray:
         """
@@ -1637,7 +1637,7 @@ class RDD(Generic[T_co]):
         >>> sc.parallelize([1, 2, 3]).sampleVariance()
         1.0
         """
-        return self.stats().sampleVariance()
+        return self.stats().sampleVariance()  # type: ignore[return-value]
 
     def countByValue(self: "RDD[K]") -> Dict[K, int]:
         """
@@ -1650,8 +1650,8 @@ class RDD(Generic[T_co]):
         [(1, 2), (2, 3)]
         """
 
-        def countPartition(iterator):
-            counts = defaultdict(int)
+        def countPartition(iterator: Iterator) -> Generator[defaultdict[Any, int], Any, None]:
+            counts: defaultdict[Any, int] = defaultdict(int)
             for obj in iterator:
                 counts[obj] += 1
             yield counts
@@ -1661,7 +1661,7 @@ class RDD(Generic[T_co]):
                 m1[k] += v
             return m1
 
-        return self.mapPartitions(countPartition).reduce(mergeMaps)
+        return self.mapPartitions(countPartition).reduce(mergeMaps)  # type: ignore[arg-type]
 
     @overload
     def top(self: "RDD[O]", num: int) -> List[O]:
@@ -1671,7 +1671,7 @@ class RDD(Generic[T_co]):
     def top(self, num: int, key: Callable[[T_co], O]) -> List[T_co]:
         ...
 
-    def top(self: Optional["RDD[O]"], num: int, key: Optional[Callable[[T_co], O]] = None) -> Union[List[O], List[T_co]]:
+    def top(self: "RDD[O]", num: int, key: Optional[Callable[[T_co], O]] = None) -> Union[List[O], List[T_co]]:  # type: ignore[misc]
         """
         Get the top N elements from an RDD.
 
@@ -1693,7 +1693,7 @@ class RDD(Generic[T_co]):
         """
 
         def topIterator(iterator: Iterator) -> Generator[list[T_co], Any, None]:
-            yield heapq.nlargest(num, iterator, key=key)
+            yield heapq.nlargest(num, iterator, key=key)  # type: ignore[arg-type]
 
         def merge(a, b) -> list[T_co]:
             return heapq.nlargest(num, a + b, key=key)
@@ -1708,7 +1708,11 @@ class RDD(Generic[T_co]):
     def takeOrdered(self, num: int, key: Callable[[T_co], O]) -> List[T_co]:
         ...
 
-    def takeOrdered(self: Optional["RDD[O]"], num: int, key: Optional[Callable[[T_co], O]] = None) -> Union[List[T_co], List[O]]:
+    def takeOrdered(
+        self: "RDD[O]",
+        num: int,
+        key: Optional[Callable[[T_co], O]] = None
+    ) -> Union[List[T_co], List[O]]:  # type: ignore[misc]
         """
         Get the N elements from an RDD ordered in ascending order or as
         specified by the optional key function.
@@ -1726,7 +1730,7 @@ class RDD(Generic[T_co]):
         [10, 9, 7, 6, 5, 4]
         """
 
-        def merge(a, b):
+        def merge(a, b) -> list[T_co]:
             return heapq.nsmallest(num, a + b, key)
 
         return self.mapPartitions(lambda it: [heapq.nsmallest(num, it, key)]).reduce(merge)
