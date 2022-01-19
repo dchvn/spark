@@ -60,6 +60,7 @@ from pyspark.join import (
     python_full_outer_join,
     python_cogroup,
 )
+from pyspark.sql._typing import RowLike, AtomicValue
 from pyspark.sql.pandas._typing import PandasScalarUDFType, PandasGroupedMapUDFType, PandasGroupedAggUDFType, \
     PandasMapIterUDFType, PandasCogroupedMapUDFType, ArrowMapIterUDFType
 from pyspark.sql.types import StructType, AtomicType
@@ -302,7 +303,7 @@ class RDD(Generic[T_co]):
         self._id = jrdd.id()
         self.partitioner = None
 
-    def _pickled(self) -> Union["RDD", "RDD[T_co]"]:
+    def _pickled(self) -> Union["RDD[U]", "RDD[T_co]"]:
         return self._reserialize(AutoBatchedSerializer(CPickleSerializer()))
 
     def id(self) -> int:
@@ -778,7 +779,7 @@ class RDD(Generic[T_co]):
             .keys()
         )
 
-    def _reserialize(self, serializer: Optional[Serializer] = None) -> Union["RDD", "RDD[T_co]"]:
+    def _reserialize(self, serializer: Optional[Serializer] = None) -> "Union[RDD[U], RDD[T_co]]":
         serializer = serializer or self.ctx.serializer
         if self._jrdd_deserializer != serializer:
             self = self.map(lambda x: x, preservesPartitioning=True)  # type: ignore[misc]
@@ -2823,7 +2824,7 @@ class RDD(Generic[T_co]):
                 return ser.batchSize
             return 1  # not batched
 
-        def batch_as(rdd: "RDD[T_co]", batchSize: int) -> "RDD[U]":
+        def batch_as(rdd: "RDD[T_co]", batchSize: int) -> "Union[RDD[U], RDD[T_co]]":
             return rdd._reserialize(BatchedSerializer(CPickleSerializer(), batchSize))
 
         my_batch = get_batch_size(self._jrdd_deserializer)
@@ -2834,8 +2835,8 @@ class RDD(Generic[T_co]):
             if batchSize <= 0:
                 # auto batched or unlimited
                 batchSize = 100
-            other = batch_as(other, batchSize)
-            self = batch_as(self, batchSize)
+            other = batch_as(other, batchSize)  # type: ignore[assignment, arg-type]
+            self = batch_as(self, batchSize)  # type: ignore[assignment]
 
         if self.getNumPartitions() != other.getNumPartitions():
             raise ValueError("Can only zip with RDD which has the same number of partitions")
@@ -2869,9 +2870,9 @@ class RDD(Generic[T_co]):
             for i in range(len(nums) - 1):
                 starts.append(starts[-1] + nums[i])
 
-        def func(k, it):
+        def func(k: Any, it: Any) -> Iterable[U]:
             for i, v in enumerate(it, starts[k]):
-                yield v, i
+                yield v, i  # type: ignore[misc]
 
         return self.mapPartitionsWithIndex(func)
 
@@ -2891,9 +2892,9 @@ class RDD(Generic[T_co]):
         """
         n = self.getNumPartitions()
 
-        def func(k, it):
+        def func(k: Any, it: Any) -> Iterable[U]:
             for i, v in enumerate(it):
-                yield v, i * n + k
+                yield v, i * n + k  # type: ignore[misc]
 
         return self.mapPartitionsWithIndex(func)
 
@@ -2948,7 +2949,7 @@ class RDD(Generic[T_co]):
         )
         return storage_level
 
-    def _defaultReducePartitions(self):
+    def _defaultReducePartitions(self) -> int:
         """
         Returns the default number of partitions to use during reduce tasks (e.g., groupBy).
         If spark.default.parallelism is set, then we'll use the value from SparkContext
@@ -2991,13 +2992,14 @@ class RDD(Generic[T_co]):
 
         return values.collect()
 
-    def _to_java_object_rdd(self):
+    def _to_java_object_rdd(self) -> JavaObject:
         """Return a JavaRDD of Object by unpickling
 
         It will convert each Python object into Java object by Pickle, whenever the
         RDD is serialized in batch or not.
         """
         rdd = self._pickled()
+        assert self.ctx._jvm is not None
         return self.ctx._jvm.SerDeUtil.pythonToJava(rdd._jrdd, True)
 
     def countApprox(self, timeout: int, confidence: float = 0.95) -> int:
@@ -3084,7 +3086,7 @@ class RDD(Generic[T_co]):
         if relativeSD < 0.000017:
             raise ValueError("relativeSD should be greater than 0.000017")
         # the hash space in Java is 2^32
-        hashRDD = self.map(lambda x: portable_hash(x) & 0xFFFFFFFF)
+        hashRDD = self.map(lambda x: portable_hash(x) & 0xFFFFFFFF)  # type: ignore[misc]
         return hashRDD._to_java_object_rdd().countApproxDistinct(relativeSD)
 
     def toLocalIterator(self, prefetchPartitions: bool = False) -> Iterator[T_co]:
@@ -3142,7 +3144,7 @@ class RDD(Generic[T_co]):
         """
         return RDDBarrier(self)
 
-    def _is_barrier(self):
+    def _is_barrier(self) -> bool:
         """
         Whether this RDD is in a barrier stage.
         """
@@ -3241,7 +3243,7 @@ def _wrap_function(sc, func, deserializer, serializer, profiler=None):
     )
 
 
-class RDDBarrier:
+class RDDBarrier(Generic[T]):
 
     """
     Wraps an RDD in a barrier stage, which forces Spark to launch tasks of this stage together.
