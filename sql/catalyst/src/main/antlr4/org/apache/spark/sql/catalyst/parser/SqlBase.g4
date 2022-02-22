@@ -225,8 +225,8 @@ statement
     | SHOW VIEWS ((FROM | IN) multipartIdentifier)?
         (LIKE? pattern=STRING)?                                        #showViews
     | SHOW PARTITIONS multipartIdentifier partitionSpec?               #showPartitions
-    | SHOW identifier? FUNCTIONS
-        (LIKE? (multipartIdentifier | pattern=STRING))?                #showFunctions
+    | SHOW identifier? FUNCTIONS ((FROM | IN) ns=multipartIdentifier)?
+        (LIKE? (legacy=multipartIdentifier | pattern=STRING))?         #showFunctions
     | SHOW CREATE TABLE multipartIdentifier (AS SERDE)?                #showCreateTable
     | SHOW CURRENT namespace                                           #showCurrentNamespace
     | SHOW CATALOGS (LIKE? pattern=STRING)?                            #showCatalogs
@@ -860,6 +860,7 @@ valueExpression
 
 primaryExpression
     : name=(CURRENT_DATE | CURRENT_TIMESTAMP | CURRENT_USER)                                   #currentLike
+    | TIMESTAMPADD '(' unit=identifier ',' unitsAmount=valueExpression ',' timestamp=valueExpression ')'  #timestampadd
     | CASE whenClause+ (ELSE elseExpression=expression)? END                                   #searchedCase
     | CASE value=expression whenClause+ (ELSE elseExpression=expression)? END                  #simpleCase
     | name=(CAST | TRY_CAST) '(' expression AS dataType ')'                                    #cast
@@ -888,6 +889,8 @@ primaryExpression
        FROM srcStr=valueExpression ')'                                                         #trim
     | OVERLAY '(' input=valueExpression PLACING replace=valueExpression
       FROM position=valueExpression (FOR length=valueExpression)? ')'                          #overlay
+    | PERCENTILE_CONT '(' percentage=valueExpression ')'
+      WITHIN GROUP '(' ORDER BY sortItem ')'                                                   #percentile
     ;
 
 constant
@@ -1265,6 +1268,7 @@ ansiNonReserved
     | TEMPORARY
     | TERMINATED
     | TIMESTAMP
+    | TIMESTAMPADD
     | TOUCH
     | TRANSACTION
     | TRANSACTIONS
@@ -1475,6 +1479,7 @@ nonReserved
     | PARTITION
     | PARTITIONED
     | PARTITIONS
+    | PERCENTILE_CONT
     | PERCENTLIT
     | PIVOT
     | PLACING
@@ -1541,6 +1546,7 @@ nonReserved
     | THEN
     | TIME
     | TIMESTAMP
+    | TIMESTAMPADD
     | TO
     | TOUCH
     | TRAILING
@@ -1570,6 +1576,7 @@ nonReserved
     | WHERE
     | WINDOW
     | WITH
+    | WITHIN
     | YEAR
     | ZONE
 //--DEFAULT-NON-RESERVED-END
@@ -1747,6 +1754,7 @@ OVERWRITE: 'OVERWRITE';
 PARTITION: 'PARTITION';
 PARTITIONED: 'PARTITIONED';
 PARTITIONS: 'PARTITIONS';
+PERCENTILE_CONT: 'PERCENTILE_CONT';
 PERCENTLIT: 'PERCENT';
 PIVOT: 'PIVOT';
 PLACING: 'PLACING';
@@ -1816,6 +1824,7 @@ TERMINATED: 'TERMINATED';
 THEN: 'THEN';
 TIME: 'TIME';
 TIMESTAMP: 'TIMESTAMP';
+TIMESTAMPADD: 'TIMESTAMPADD';
 TO: 'TO';
 TOUCH: 'TOUCH';
 TRAILING: 'TRAILING';
@@ -1847,6 +1856,7 @@ WHEN: 'WHEN';
 WHERE: 'WHERE';
 WINDOW: 'WINDOW';
 WITH: 'WITH';
+WITHIN: 'WITHIN';
 YEAR: 'YEAR';
 ZONE: 'ZONE';
 //--SPARK-KEYWORD-LIST-END

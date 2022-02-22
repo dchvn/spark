@@ -17,7 +17,7 @@
 
 # Set everything to be logged to the console
 rootLogger.level = info
-rootLogger.appenderRef.file.ref = console
+rootLogger.appenderRef.stdout.ref = console
 
 appender.console.type = Console
 appender.console.name = console
@@ -57,7 +57,7 @@ logger.FunctionRegistry.level = error
 
 # For deploying Spark ThriftServer
 # SPARK-34128: Suppress undesirable TTransportException warnings involved in THRIFT-4805
-appender.console.filter.1.type = MarkerFilter
-appender.console.filter.1.marker = Thrift error occurred during processing of message
+appender.console.filter.1.type = RegexFilter
+appender.console.filter.1.regex = .*Thrift error occurred during processing of message.*
 appender.console.filter.1.onMatch = deny
 appender.console.filter.1.onMismatch = neutral
