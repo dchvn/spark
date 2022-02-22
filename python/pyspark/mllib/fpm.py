@@ -18,11 +18,11 @@
 import sys
 
 from collections import namedtuple
-from typing import Generic, TypeVar, List, Union, cast, Any
+from typing import List, Generic, TypeVar
 
 from pyspark import since, SparkContext
 from pyspark.mllib.common import JavaModelWrapper, callMLlibFunc
-from pyspark.mllib.util import JavaSaveable, JavaLoader, inherit_doc  # type: ignore[attr-defined]
+from pyspark.mllib.util import JavaSaveable, JavaLoader, inherit_doc
 from pyspark.rdd import RDD
 
 T = TypeVar("T")
@@ -57,17 +57,15 @@ class FPGrowthModel(JavaModelWrapper, JavaSaveable, JavaLoader["FPGrowthModel"],
         """
         Returns the frequent itemsets of this model.
         """
-        return cast(Union[Any, Any, Any], self.call("getFreqItemsets")).map(
-            lambda x: (FPGrowth.FreqItemset(x[0], x[1]))
-        )
+        return self.call("getFreqItemsets").map(lambda x: (FPGrowth.FreqItemset(x[0], x[1])))
 
     @classmethod
     @since("2.0.0")
-    def load(cls, sc: "SparkContext", path: str) -> "FPGrowthModel":
+    def load(cls, sc: SparkContext, path: str) -> "FPGrowthModel":
         """
         Load a model from the given path.
         """
-        model = cls._load_java(sc, path)  # type: ignore[attr-defined]
+        model = cls._load_java(sc, path)
         assert sc._jvm is not None
         wrapper = sc._jvm.org.apache.spark.mllib.api.python.FPGrowthModelWrapper(model)
         return FPGrowthModel(wrapper)
@@ -135,9 +133,7 @@ class PrefixSpanModel(JavaModelWrapper, Generic[T]):
     @since("1.6.0")
     def freqSequences(self) -> RDD["PrefixSpan.FreqSequence[T]"]:  # type: ignore[misc]
         """Gets frequent sequences"""
-        return cast(Union[Any, Any, Any], self.call("getFreqSequences")).map(
-            lambda x: PrefixSpan.FreqSequence(x[0], x[1])
-        )
+        return self.call("getFreqSequences").map(lambda x: PrefixSpan.FreqSequence(x[0], x[1]))
 
 
 class PrefixSpan:
