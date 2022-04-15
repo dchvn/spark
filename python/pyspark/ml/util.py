@@ -696,9 +696,7 @@ class MetaAlgorithmReadWrite:
         elif isinstance(pyInstance, OneVsRest):
             pySubStages = [pyInstance.getClassifier()]
         elif isinstance(pyInstance, OneVsRestModel):
-            pySubStages = [
-                pyInstance.getClassifier()
-            ] + pyInstance.models  # type: ignore[assignment, operator]
+            pySubStages = [pyInstance.getClassifier()] + pyInstance.models
         else:
             pySubStages = []
 
